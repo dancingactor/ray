@@ -142,9 +142,6 @@ class ResourceSet {
 /// Negative values are valid in this set.
 class NodeResourceSet {
  public:
-  using ResourceIdIterator =
-      boost::select_first_range<absl::flat_hash_map<ResourceID, FixedPoint>>;
-
   NodeResourceSet(){};
 
   /// Constructs NodeResourceSet from the specified resource map.
