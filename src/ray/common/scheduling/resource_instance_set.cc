@@ -163,14 +163,12 @@ NodeResourceInstanceSet::ComputeAllocation(const std::vector<FixedPoint> &availa
   // allocating the resource instance with the smallest available capacity greater than
   // remaining_demand.
   std::vector<FixedPoint> allocation(available.size(), FixedPoint(0));
-  std::vector<FixedPoint> remaining_available = available;
   FixedPoint remaining_demand = demand;
 
   if (remaining_demand >= 1.) {
-    for (size_t i = 0; i < remaining_available.size(); i++) {
-      if (remaining_available[i] == 1.) {
+    for (size_t i = 0; i < available.size(); i++) {
+      if (available[i] == 1.) {
         allocation[i] = 1.;
-        remaining_available[i] = 0;
         remaining_demand -= 1.;
       }
       if (remaining_demand < 1.) {
@@ -188,11 +186,12 @@ NodeResourceInstanceSet::ComputeAllocation(const std::vector<FixedPoint> &availa
   if (remaining_demand > 0.) {
     int64_t idx_best_fit = -1;
     FixedPoint remaining_after_fit = 1.;
-    for (size_t i = 0; i < remaining_available.size(); i++) {
-      if (remaining_available[i] >= remaining_demand) {
-        if (idx_best_fit == -1 ||
-            (remaining_available[i] - remaining_demand < remaining_after_fit)) {
-          remaining_after_fit = remaining_available[i] - remaining_demand;
+    for (size_t i = 0; i < available.size(); i++) {
+      if (allocation[i] == 0. && available[i] >= remaining_demand) {
+        FixedPoint current_fit = available[i] - remaining_demand;
+        
+        if (idx_best_fit == -1 || current_fit < remaining_after_fit) {
+          remaining_after_fit = current_fit;
           idx_best_fit = static_cast<int64_t>(i);
         }
       }
