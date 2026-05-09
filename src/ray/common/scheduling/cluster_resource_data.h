@@ -333,7 +333,10 @@ class NodeResourcesBase {
 
   bool object_pulls_queued = false;
 
+  NodeResourcesBase() = default;
   virtual ~NodeResourcesBase() = default;
+  NodeResourcesBase(NodeResourcesBase &&) = default;
+  NodeResourcesBase &operator=(NodeResourcesBase &&) = default;
 
   /// Amongst CPU, memory, and object store memory, calculate the utilization percentage
   /// of each resource and return the highest.
