@@ -335,6 +335,8 @@ class NodeResourcesBase {
 
   NodeResourcesBase() = default;
   virtual ~NodeResourcesBase() = default;
+  NodeResourcesBase(const NodeResourcesBase &) = default;
+  NodeResourcesBase &operator=(const NodeResourcesBase &) = default;
   NodeResourcesBase(NodeResourcesBase &&) = default;
   NodeResourcesBase &operator=(NodeResourcesBase &&) = default;
 
