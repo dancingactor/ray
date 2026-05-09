@@ -341,7 +341,7 @@ class NodeResourcesBase {
   /// Returns true if the node has the available resources to run the task.
   /// Note: This doesn't account for the binpacking of unit resources.
   virtual bool IsAvailable(const ResourceRequest &resource_request,
-                            bool ignore_at_capacity = false) const = 0;
+                           bool ignore_at_capacity = false) const = 0;
   /// Returns true if the node's total resources are enough to run the task.
   /// Note: This doesn't account for the binpacking of unit resources.
   virtual bool IsFeasible(const ResourceRequest &resource_request) const = 0;
@@ -381,8 +381,7 @@ class NodeResourcesBase {
 class NodeResources : public NodeResourcesBase {
  public:
   NodeResources() {}
-  explicit NodeResources(const NodeResourceSet &resources)
-      : available(resources) {
+  explicit NodeResources(const NodeResourceSet &resources) : available(resources) {
     total = resources;
   }
   NodeResourceSet available;
@@ -419,7 +418,7 @@ class NodeResources : public NodeResourcesBase {
 
   /// Set a single resource's available to an explicit scalar value.
   void SetAvailableResource(scheduling::ResourceID resource_id,
-                             FixedPoint value) override;
+                            FixedPoint value) override;
 
   /// Replace the entire available field from a NodeResourceSet.
   void SetAvailable(NodeResourceSet resource_set) override;
@@ -434,8 +433,7 @@ class NodeResources : public NodeResourcesBase {
 class NodeResourcesV2 : public NodeResourcesBase {
  public:
   NodeResourcesV2() {}
-  explicit NodeResourcesV2(const NodeResourceSet &resources)
-      : available(resources) {
+  explicit NodeResourcesV2(const NodeResourceSet &resources) : available(resources) {
     total = resources;
   }
   NodeResourceSet available;
@@ -472,7 +470,7 @@ class NodeResourcesV2 : public NodeResourcesBase {
 
   /// Set a single resource's available to an explicit scalar value.
   void SetAvailableResource(scheduling::ResourceID resource_id,
-                             FixedPoint value) override;
+                            FixedPoint value) override;
 
   /// Replace the entire available field from a NodeResourceSet.
   void SetAvailable(NodeResourceSet resource_set) override;

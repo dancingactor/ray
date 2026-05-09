@@ -1127,10 +1127,10 @@ RAY_CONFIG(int64_t,
            idle_worker_killing_memory_threshold_bytes,
            1024 * 1024 * 1024)  // 1GB
 
-/// This is a temporary config for fixing GPU fractional scheduling by tracking per-instance availability
-/// If true, use per-instance resource view (NewNodeResources) for cluster
-/// scheduling instead of the scalar NodeResources. This enables accurate
-/// GPU fragmentation detection in the scheduler so that tasks are not
-/// scheduled to nodes where aggregate GPU capacity is sufficient but no
-/// single GPU instance has enough remaining capacity. Defaults to false.
+/// This is a temporary config for fixing GPU fractional scheduling by tracking
+/// per-instance availability. If true, use per-instance resource view (NewNodeResources)
+/// for cluster scheduling instead of the scalar NodeResources. This enables accurate GPU
+/// fragmentation detection in the scheduler so that tasks are not scheduled to nodes
+/// where aggregate GPU capacity is sufficient but no single GPU instance has enough
+/// remaining capacity. Defaults to false.
 RAY_CONFIG(bool, enable_per_instance_resource_scheduling, false)

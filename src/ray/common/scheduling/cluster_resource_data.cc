@@ -221,7 +221,7 @@ float NodeResourcesV2::CalculateCriticalResourceUtilization() const {
 }
 
 bool NodeResourcesV2::IsAvailable(const ResourceRequest &resource_request,
-                                   bool ignore_pull_manager_at_capacity) const {
+                                  bool ignore_pull_manager_at_capacity) const {
   if (!ignore_pull_manager_at_capacity && resource_request.RequiresObjectStoreMemory() &&
       object_pulls_queued) {
     RAY_LOG(DEBUG) << "At pull manager capacity";
@@ -324,7 +324,7 @@ void NodeResourcesV2::SubtractAvailable(const ResourceSet &resource_set) {
 }
 
 void NodeResourcesV2::SetAvailableResource(scheduling::ResourceID resource_id,
-                                            FixedPoint value) {
+                                           FixedPoint value) {
   available.Set(resource_id, value);
 }
 
