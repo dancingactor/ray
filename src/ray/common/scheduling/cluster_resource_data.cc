@@ -137,12 +137,16 @@ bool NodeResources::NodeLabelMatchesConstraint(const LabelConstraint &constraint
   return false;
 }
 
-bool NodeResources::operator==(const NodeResources &other) const {
-  return this->available == other.available && this->total == other.total &&
-         this->labels == other.labels;
+bool NodeResources::operator==(const NodeResourcesBase &other) const {
+  const auto *o = dynamic_cast<const NodeResources *>(&other);
+  if (!o) {
+    return false;
+  }
+  return this->available == o->available && this->total == o->total &&
+         this->labels == o->labels;
 }
 
-bool NodeResources::operator!=(const NodeResources &other) const {
+bool NodeResources::operator!=(const NodeResourcesBase &other) const {
   return !(*this == other);
 }
 
@@ -195,6 +199,143 @@ bool NodeResources::HasAvailableResource(scheduling::ResourceID resource_id) con
 const NodeResourceSet &NodeResources::GetAvailable() const { return available; }
 
 NodeResourceSet NodeResources::TakeAvailable() { return std::move(available); }
+
+// ---- NodeResourcesV2 ----
+// NOTE: This class is currently identical to NodeResources. It will diverge in a
+// subsequent PR to use per-instance resource vectors for available resources.
+
+float NodeResourcesV2::CalculateCriticalResourceUtilization() const {
+  float highest = 0;
+  for (const auto &i : {CPU, MEM, OBJECT_STORE_MEM}) {
+    const auto &cur_total = this->total.Get(ResourceID(i));
+    if (cur_total == 0) {
+      continue;
+    }
+    auto cur_available = this->available.Get(ResourceID(i)).Double();
+    float utilization = 1 - (cur_available / cur_total.Double());
+    if (utilization > highest) {
+      highest = utilization;
+    }
+  }
+  return highest;
+}
+
+bool NodeResourcesV2::IsAvailable(const ResourceRequest &resource_request,
+                                   bool ignore_pull_manager_at_capacity) const {
+  if (!ignore_pull_manager_at_capacity && resource_request.RequiresObjectStoreMemory() &&
+      object_pulls_queued) {
+    RAY_LOG(DEBUG) << "At pull manager capacity";
+    return false;
+  }
+
+  const auto &label_selector = resource_request.GetLabelSelector();
+  if (!HasRequiredLabels(label_selector)) {
+    return false;
+  }
+
+  return this->available >= resource_request.GetResourceSet();
+}
+
+bool NodeResourcesV2::IsFeasible(const ResourceRequest &resource_request) const {
+  const auto &label_selector = resource_request.GetLabelSelector();
+  if (!HasRequiredLabels(label_selector)) {
+    return false;
+  }
+  return this->total >= resource_request.GetResourceSet();
+}
+
+bool NodeResourcesV2::HasRequiredLabels(const LabelSelector &label_selector) const {
+  // Check if node labels satisfy all label constraints
+  const auto &constraints = label_selector.GetConstraints();
+  for (const auto &constraint : constraints) {
+    if (!NodeLabelMatchesConstraint(constraint)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool NodeResourcesV2::NodeLabelMatchesConstraint(
+    const LabelConstraint &constraint) const {
+  const auto &key = constraint.GetLabelKey();
+  const auto &match_operator = constraint.GetOperator();
+  const auto &values = constraint.GetLabelValues();
+
+  const auto &node_labels = this->labels;
+  if (match_operator == LabelSelectorOperator::LABEL_IN) {
+    // Check for equals or in() labels
+    if (node_labels.contains(key) && values.contains(node_labels.at(key))) {
+      return true;
+    }
+  } else if (match_operator == LabelSelectorOperator::LABEL_NOT_IN) {
+    // Check for not equals (!) or not in (!in()) labels
+    if (!(node_labels.contains(key) && values.contains(node_labels.at(key)))) {
+      return true;
+    }
+  } else {
+    RAY_CHECK(false)
+        << "Node label constraint operator type must be one of equals, not equals (!),"
+           "in、or not in (!in)";
+  }
+  return false;
+}
+
+bool NodeResourcesV2::operator==(const NodeResourcesBase &other) const {
+  const auto *o = dynamic_cast<const NodeResourcesV2 *>(&other);
+  if (!o) {
+    return false;
+  }
+  return this->available == o->available && this->total == o->total &&
+         this->labels == o->labels;
+}
+
+bool NodeResourcesV2::operator!=(const NodeResourcesBase &other) const {
+  return !(*this == other);
+}
+
+std::string NodeResourcesV2::DebugString() const {
+  std::stringstream buffer;
+  buffer << "{\"total\":" << total.DebugString();
+  buffer << "}, \"available\": " << available.DebugString();
+  buffer << "}, \"labels\":{";
+  for (const auto &[key, value] : labels) {
+    buffer << "\"" << key << "\":\"" << value << "\",";
+  }
+  buffer << "}, \"is_draining\": " << is_draining;
+  buffer << ", \"draining_deadline_timestamp_ms\": " << draining_deadline_timestamp_ms
+         << "}";
+  return buffer.str();
+}
+
+std::string NodeResourcesV2::DictString() const { return DebugString(); }
+
+FixedPoint NodeResourcesV2::GetAvailableSum(scheduling::ResourceID resource_id) const {
+  return available.Get(resource_id);
+}
+
+std::set<scheduling::ResourceID> NodeResourcesV2::GetAvailableResourceIds() const {
+  return available.ExplicitResourceIds();
+}
+
+void NodeResourcesV2::SubtractAvailable(const ResourceSet &resource_set) {
+  available -= resource_set;
+  available.RemoveNegative();
+}
+
+void NodeResourcesV2::SetAvailableResource(scheduling::ResourceID resource_id,
+                                            FixedPoint value) {
+  available.Set(resource_id, value);
+}
+
+void NodeResourcesV2::SetAvailable(NodeResourceSet resource_set) {
+  available = std::move(resource_set);
+}
+
+absl::flat_hash_map<std::string, double> NodeResourcesV2::GetAvailableResourceMap()
+    const {
+  return available.GetResourceMap();
+}
 
 bool NodeResourceInstances::operator==(const NodeResourceInstances &other) const {
   return this->total == other.total && this->available == other.available;
