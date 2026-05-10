@@ -550,6 +550,18 @@ NodeResources ResourceMapToNodeResources(
     const absl::flat_hash_map<std::string, double> &resource_map_available,
     const absl::flat_hash_map<std::string, std::string> &node_labels = {});
 
+/// Convert a map of resources to a NodeResourcesV2 data structure.
+///
+/// \param string_to_int_map: Map between names and ids maintained by the
+/// \param resource_map_total: Total capacities of resources we want to convert.
+/// \param resource_map_available: Available capacities of resources we want to convert.
+///
+/// \request Conversion result to a NodeResourcesV2 data structure.
+NodeResourcesV2 ResourceMapToNodeResourcesV2(
+    const absl::flat_hash_map<std::string, double> &resource_map_total,
+    const absl::flat_hash_map<std::string, double> &resource_map_available,
+    const absl::flat_hash_map<std::string, std::string> &node_labels = {});
+
 /// Convert a map of resources to a ResourceRequest data structure.
 ResourceRequest ResourceMapToResourceRequest(
     const absl::flat_hash_map<std::string, double> &resource_map,

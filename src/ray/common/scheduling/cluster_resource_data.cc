@@ -61,6 +61,24 @@ NodeResources ResourceMapToNodeResources(
   return node_resources;
 }
 
+/// Convert a map of resources to a NodeResourcesV2 data structure.
+///
+/// \param string_to_int_map: Map between names and ids maintained by the
+/// \param resource_map_total: Total capacities of resources we want to convert.
+/// \param resource_map_available: Available capacities of resources we want to convert.
+///
+/// \request Conversion result to a NodeResourcesV2 data structure.
+NodeResourcesV2 ResourceMapToNodeResourcesV2(
+    const absl::flat_hash_map<std::string, double> &resource_map_total,
+    const absl::flat_hash_map<std::string, double> &resource_map_available,
+    const absl::flat_hash_map<std::string, std::string> &node_labels) {
+  NodeResourcesV2 node_resources;
+  node_resources.total = NodeResourceSet(resource_map_total);
+  node_resources.available = NodeResourceSet(resource_map_available);
+  node_resources.labels = node_labels;
+  return node_resources;
+}
+
 float NodeResources::CalculateCriticalResourceUtilization() const {
   float highest = 0;
   for (const auto &i : {CPU, MEM, OBJECT_STORE_MEM}) {
