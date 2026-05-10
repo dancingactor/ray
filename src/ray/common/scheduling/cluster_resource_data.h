@@ -435,9 +435,10 @@ class NodeResources : public NodeResourcesBase {
   absl::flat_hash_map<std::string, double> GetAvailableResourceMap() const override;
 };
 
-/// NodeResourcesV2 is identical to NodeResources. It will diverge in a subsequent PR
-/// to store available resources as a per-instance vector (NodeResourceInstanceSet)
-/// rather than an aggregated scalar NodeResourceSet, enabling GPU-fraction scheduling.
+/// NodeResourcesV2 is currently identical to NodeResources. It will diverge in a
+/// subsequent PR to store available resources as a per-instance vector
+/// (NodeResourceInstanceSet) rather than an aggregated scalar NodeResourceSet, enabling
+/// GPU-fraction scheduling.
 class NodeResourcesV2 : public NodeResourcesBase {
  public:
   NodeResourcesV2() {}

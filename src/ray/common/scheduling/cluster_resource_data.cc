@@ -218,10 +218,6 @@ const NodeResourceSet &NodeResources::GetAvailable() const { return available; }
 
 NodeResourceSet NodeResources::TakeAvailable() { return std::move(available); }
 
-// ---- NodeResourcesV2 ----
-// NOTE: This class is currently identical to NodeResources. It will diverge in a
-// subsequent PR to use per-instance resource vectors for available resources.
-
 float NodeResourcesV2::CalculateCriticalResourceUtilization() const {
   float highest = 0;
   for (const auto &i : {CPU, MEM, OBJECT_STORE_MEM}) {
