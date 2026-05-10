@@ -138,10 +138,10 @@ bool NodeResources::NodeLabelMatchesConstraint(const LabelConstraint &constraint
 }
 
 bool NodeResources::operator==(const NodeResourcesBase &other) const {
-  const auto *o = dynamic_cast<const NodeResources *>(&other);
-  if (!o) {
+  if (other.IsV2()) {
     return false;
   }
+  const auto *o = static_cast<const NodeResources *>(&other);
   return this->available == o->available && this->total == o->total &&
          this->labels == o->labels;
 }
@@ -282,10 +282,10 @@ bool NodeResourcesV2::NodeLabelMatchesConstraint(
 }
 
 bool NodeResourcesV2::operator==(const NodeResourcesBase &other) const {
-  const auto *o = dynamic_cast<const NodeResourcesV2 *>(&other);
-  if (!o) {
+  if (!other.IsV2()) {
     return false;
   }
+  const auto *o = static_cast<const NodeResourcesV2 *>(&other);
   return this->available == o->available && this->total == o->total &&
          this->labels == o->labels;
 }

@@ -340,6 +340,9 @@ class NodeResourcesBase {
   NodeResourcesBase(NodeResourcesBase &&) = default;
   NodeResourcesBase &operator=(NodeResourcesBase &&) = default;
 
+  /// Returns true if this object is a NodeResourcesV2 instance (avoids dynamic_cast).
+  virtual bool IsV2() const { return false; }
+
   /// Amongst CPU, memory, and object store memory, calculate the utilization percentage
   /// of each resource and return the highest.
   virtual float CalculateCriticalResourceUtilization() const = 0;
@@ -442,6 +445,8 @@ class NodeResourcesV2 : public NodeResourcesBase {
     total = resources;
   }
   NodeResourceSet available;
+
+  bool IsV2() const override { return true; }
 
   /// Amongst CPU, memory, and object store memory, calculate the utilization percentage
   /// of each resource and return the highest.
