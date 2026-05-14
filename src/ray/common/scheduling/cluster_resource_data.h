@@ -402,7 +402,6 @@ class NodeResources : public NodeResourcesBase {
   explicit NodeResources(const NodeResourceSet &resources) : available(resources) {
     total = resources;
   }
-  NodeResourceSet available;
 
   /// Amongst CPU, memory, and object store memory, calculate the utilization percentage
   /// of each resource and return the highest.
@@ -453,6 +452,8 @@ class NodeResources : public NodeResourcesBase {
   /// Transfer ownership of the available resource set (leaves available in a moved-from
   /// state).
   NodeResourceSet TakeAvailable() override;
+ private:
+  NodeResourceSet available;
 };
 
 /// NodeResourcesV2 is currently identical to NodeResources. It will diverge in a
