@@ -383,6 +383,16 @@ class NodeResourcesBase {
 
   /// Return available resources as a name->value map.
   virtual absl::flat_hash_map<std::string, double> GetAvailableResourceMap() const = 0;
+
+  /// Returns true if the resource has an explicit available entry.
+  virtual bool HasAvailableResource(scheduling::ResourceID resource_id) const = 0;
+
+  /// Read-only access to the entire available resource set.
+  virtual const NodeResourceSet &GetAvailable() const = 0;
+
+  /// Transfer ownership of the available resource set (leaves available in a moved-from
+  /// state).
+  virtual NodeResourceSet TakeAvailable() = 0;
 };
 
 /// Total and available capacities of each resource of a node.
@@ -433,6 +443,16 @@ class NodeResources : public NodeResourcesBase {
 
   /// Return available resources as a name->value map.
   absl::flat_hash_map<std::string, double> GetAvailableResourceMap() const override;
+
+  /// Returns true if the resource has an explicit available entry.
+  bool HasAvailableResource(scheduling::ResourceID resource_id) const override;
+
+  /// Read-only access to the entire available resource set.
+  const NodeResourceSet &GetAvailable() const override;
+
+  /// Transfer ownership of the available resource set (leaves available in a moved-from
+  /// state).
+  NodeResourceSet TakeAvailable() override;
 };
 
 /// NodeResourcesV2 is currently identical to NodeResources. It will diverge in a
@@ -445,7 +465,6 @@ class NodeResourcesV2 : public NodeResourcesBase {
   explicit NodeResourcesV2(const NodeResourceSet &resources) : available(resources) {
     total = resources;
   }
-  NodeResourceSet available;
 
   bool IsV2() const override { return true; }
 
@@ -490,14 +509,14 @@ class NodeResourcesV2 : public NodeResourcesBase {
   absl::flat_hash_map<std::string, double> GetAvailableResourceMap() const override;
 
   /// Returns true if the resource has an explicit available entry.
-  bool HasAvailableResource(scheduling::ResourceID resource_id) const;
+  bool HasAvailableResource(scheduling::ResourceID resource_id) const override;
 
   /// Read-only access to the entire available resource set.
-  const NodeResourceSet &GetAvailable() const;
+  const NodeResourceSet &GetAvailable() const override;
 
   /// Transfer ownership of the available resource set (leaves available in a moved-from
   /// state).
-  NodeResourceSet TakeAvailable();
+  NodeResourceSet TakeAvailable() override;
 
  private:
   NodeResourceSet available;

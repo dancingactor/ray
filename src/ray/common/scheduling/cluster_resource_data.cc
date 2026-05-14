@@ -74,7 +74,7 @@ NodeResourcesV2 ResourceMapToNodeResourcesV2(
     const absl::flat_hash_map<std::string, std::string> &node_labels) {
   NodeResourcesV2 node_resources;
   node_resources.total = NodeResourceSet(resource_map_total);
-  node_resources.available = NodeResourceSet(resource_map_available);
+  node_resources.SetAvailable(NodeResourceSet(resource_map_available));
   node_resources.labels = node_labels;
   return node_resources;
 }
@@ -350,6 +350,14 @@ absl::flat_hash_map<std::string, double> NodeResourcesV2::GetAvailableResourceMa
     const {
   return available.GetResourceMap();
 }
+
+bool NodeResourcesV2::HasAvailableResource(scheduling::ResourceID resource_id) const {
+  return available.Has(resource_id);
+}
+
+const NodeResourceSet &NodeResourcesV2::GetAvailable() const { return available; }
+
+NodeResourceSet NodeResourcesV2::TakeAvailable() { return std::move(available); }
 
 bool NodeResourceInstances::operator==(const NodeResourceInstances &other) const {
   return this->total == other.total && this->available == other.available;
