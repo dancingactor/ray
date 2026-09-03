@@ -45,8 +45,9 @@ LocalResourceManager::LocalResourceManager(
       resource_change_subscriber_(resource_change_subscriber),
       resource_usage_gauge_(resource_usage_gauge) {
   RAY_CHECK(node_resources.total == node_resources.available);
-  local_resources_.available = NodeResourceInstanceSet(node_resources.total);
-  local_resources_.total = NodeResourceInstanceSet(node_resources.total);
+  local_resources_.available =
+      NodeResourceInstanceSet(node_resources.total.GetResourceMap());
+  local_resources_.total = NodeResourceInstanceSet(node_resources.total.GetResourceMap());
   local_resources_.labels = node_resources.labels;
   const auto now = clock_.Now();
   for (const auto &resource_id : node_resources.total.ExplicitResourceIds()) {

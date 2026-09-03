@@ -26,19 +26,27 @@
 
 namespace ray {
 
-NodeResourceInstanceSet::NodeResourceInstanceSet(const NodeResourceSet &total) {
-  for (auto &resource_id : total.ExplicitResourceIds()) {
+NodeResourceInstanceSet::NodeResourceInstanceSet(
+    const absl::flat_hash_map<std::string, double> &resource_map) {
+  for (const auto &[name, value] : resource_map) {
+    ResourceID resource_id(name);
     std::vector<FixedPoint> instances;
-    auto value = total.Get(resource_id);
     if (resource_id.IsUnitInstanceResource()) {
-      size_t num_instances = static_cast<size_t>(value.Double());
+      size_t num_instances = static_cast<size_t>(value);
       for (size_t i = 0; i < num_instances; i++) {
         instances.push_back(1.0);
-      };
+      }
     } else {
-      instances.push_back(value);
+      instances.push_back(FixedPoint(value));
     }
-    Set(resource_id, instances);
+    Set(resource_id, std::move(instances));
+  }
+}
+
+NodeResourceInstanceSet::NodeResourceInstanceSet(
+    absl::flat_hash_map<ResourceID, std::vector<FixedPoint>> resource_allocation) {
+  for (auto &[resource_id, instances] : resource_allocation) {
+    Set(resource_id, std::move(instances));
   }
 }
 

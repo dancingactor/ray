@@ -30,8 +30,13 @@ class NodeResourceInstanceSet {
  public:
   NodeResourceInstanceSet(){};
 
-  /// Construct a NodeResourceInstanceSet from a node total resources.
-  explicit NodeResourceInstanceSet(const NodeResourceSet &total);
+  /// Construct a NodeResourceInstanceSet from a resource map
+  explicit NodeResourceInstanceSet(
+      const absl::flat_hash_map<std::string, double> &resource_map);
+
+  /// Construct a NodeResourceInstanceSet from a per-instance resource map.
+  explicit NodeResourceInstanceSet(
+      absl::flat_hash_map<ResourceID, std::vector<FixedPoint>> resource_allocation);
 
   /// Check whether a particular node resource exist.
   bool Has(ResourceID resource_id) const;

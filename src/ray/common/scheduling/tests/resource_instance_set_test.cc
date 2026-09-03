@@ -25,16 +25,16 @@ namespace ray {
 class NodeResourceInstanceSetTest : public ::testing::Test {};
 
 TEST_F(NodeResourceInstanceSetTest, TestConstructor) {
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
   ASSERT_EQ(r1.Get(ResourceID("CPU")), std::vector<FixedPoint>({FixedPoint(2)}));
   ASSERT_EQ(r1.Get(ResourceID("GPU")),
             std::vector<FixedPoint>({FixedPoint(1), FixedPoint(1)}));
 }
 
 TEST_F(NodeResourceInstanceSetTest, TestHas) {
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
   ASSERT_TRUE(r1.Has(ResourceID("CPU")));
   ASSERT_FALSE(r1.Has(ResourceID("non-exist")));
   // Every node implicitly has implicit resources.
@@ -42,8 +42,8 @@ TEST_F(NodeResourceInstanceSetTest, TestHas) {
 }
 
 TEST_F(NodeResourceInstanceSetTest, TestRemove) {
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
   ASSERT_TRUE(r1.Has(ResourceID("GPU")));
   r1.Remove(ResourceID("GPU"));
   ASSERT_FALSE(r1.Has(ResourceID("GPU")));
@@ -52,8 +52,8 @@ TEST_F(NodeResourceInstanceSetTest, TestRemove) {
 }
 
 TEST_F(NodeResourceInstanceSetTest, TestGet) {
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
   ASSERT_EQ(r1.Get(ResourceID("CPU")), std::vector<FixedPoint>({FixedPoint(2)}));
   ASSERT_EQ(r1.Get(ResourceID(std::string(kImplicitResourcePrefix) + "a")),
             std::vector<FixedPoint>({FixedPoint(1)}));
@@ -86,12 +86,12 @@ TEST_F(NodeResourceInstanceSetTest, TestSum) {
 }
 
 TEST_F(NodeResourceInstanceSetTest, TestOperator) {
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
-  NodeResourceInstanceSet r2 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
-  NodeResourceInstanceSet r3 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 1}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
+  NodeResourceInstanceSet r2 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
+  NodeResourceInstanceSet r3 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 1}});
   ASSERT_TRUE(r1 == r2);
   ASSERT_FALSE(r1 == r3);
 }
@@ -100,7 +100,8 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateOneResourceWithoutPlacementGr
   // 1. Test non-unit resource
   {
     // Allocation succeed when demand is smaller than available
-    NodeResourceInstanceSet r1 = NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}}));
+    NodeResourceInstanceSet r1 =
+        NodeResourceInstanceSet(absl::flat_hash_map<std::string, double>{{"CPU", 2}});
     ResourceSet success_request = ResourceSet({{"CPU", FixedPoint(1)}});
     auto allocations = r1.TryAllocate(success_request);
     ASSERT_EQ(allocations->size(), 1);
@@ -127,7 +128,8 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateOneResourceWithoutPlacementGr
   // 2. Test unit resource
   {
     // Succees allocation with demand > 1
-    NodeResourceInstanceSet r2 = NodeResourceInstanceSet(NodeResourceSet({{"GPU", 4}}));
+    NodeResourceInstanceSet r2 =
+        NodeResourceInstanceSet(absl::flat_hash_map<std::string, double>{{"GPU", 4}});
     ResourceSet success_request = ResourceSet({{"GPU", FixedPoint(2)}});
     auto allocations = r2.TryAllocate(success_request);
     ASSERT_EQ(allocations->size(), 1);
@@ -182,8 +184,8 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateOneResourceWithoutPlacementGr
 
   // 3. Test implicit resource
   {
-    NodeResourceInstanceSet r3 = NodeResourceInstanceSet(
-        NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
+    NodeResourceInstanceSet r3 =
+        NodeResourceInstanceSet(absl::flat_hash_map<std::string, double>{});
     ResourceSet success_request =
         ResourceSet({{std::string(kImplicitResourcePrefix) + "a", FixedPoint(0.3)}});
     auto allocations = r3.TryAllocate(success_request);
@@ -197,10 +199,10 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateOneResourceWithoutPlacementGr
 
 TEST_F(NodeResourceInstanceSetTest, TestTryAllocateMultipleResourcesWithoutPg) {
   // Case 1: Partial failure will not allocate anything
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
-  NodeResourceInstanceSet r2 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
+  NodeResourceInstanceSet r2 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
   ResourceSet fail_request =
       ResourceSet({{"CPU", FixedPoint(1)},
                    {"GPU", FixedPoint(3)},
@@ -238,12 +240,13 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateWithSinglePgResourceAndBundle
         "CPU_group_0_4482dec0faaf5ead891ff1659a9501000000");
     ResourceID pg_cpu_index_1_resource(
         "CPU_group_1_4482dec0faaf5ead891ff1659a9501000000");
-    NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
-        NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
-    r1.Set(cpu_resource, std::vector<FixedPoint>({FixedPoint(1)}));
-    r1.Set(pg_cpu_wildcard_resource, std::vector<FixedPoint>({FixedPoint(4)}));
-    r1.Set(pg_cpu_index_0_resource, std::vector<FixedPoint>({FixedPoint(2)}));
-    r1.Set(pg_cpu_index_1_resource, std::vector<FixedPoint>({FixedPoint(2)}));
+    NodeResourceInstanceSet r1 =
+        NodeResourceInstanceSet(absl::flat_hash_map<ResourceID, std::vector<FixedPoint>>{
+            {cpu_resource, {FixedPoint(1)}},
+            {pg_cpu_wildcard_resource, {FixedPoint(4)}},
+            {pg_cpu_index_0_resource, {FixedPoint(2)}},
+            {pg_cpu_index_1_resource, {FixedPoint(2)}},
+        });
 
     ResourceSet success_request = ResourceSet({{pg_cpu_wildcard_resource, FixedPoint(1)},
                                                {pg_cpu_index_1_resource, FixedPoint(1)}});
@@ -279,26 +282,17 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateWithSinglePgResourceAndBundle
         "GPU_group_0_4482dec0faaf5ead891ff1659a9501000000");
     ResourceID pg_gpu_index_1_resource(
         "GPU_group_1_4482dec0faaf5ead891ff1659a9501000000");
-    NodeResourceInstanceSet r2 = NodeResourceInstanceSet(
-        NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
-    r2.Set(
-        gpu_resource,
-        std::vector<FixedPoint>(
-            {FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(1)}));
-    r2.Set(
-        pg_gpu_wildcard_resource,
-        std::vector<FixedPoint>(
-            {FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(0)}));
-    r2.Set(
-        pg_gpu_index_0_resource,
-        std::vector<FixedPoint>(
-            {FixedPoint(1), FixedPoint(1), FixedPoint(0), FixedPoint(0), FixedPoint(0)}));
-    r2.Set(pg_gpu_index_1_resource,
-           std::vector<FixedPoint>({{FixedPoint(0),
-                                     FixedPoint(0),
-                                     FixedPoint(1),
-                                     FixedPoint(1),
-                                     FixedPoint(0)}}));
+    NodeResourceInstanceSet r2 =
+        NodeResourceInstanceSet(absl::flat_hash_map<ResourceID, std::vector<FixedPoint>>{
+            {gpu_resource,
+             {FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(1)}},
+            {pg_gpu_wildcard_resource,
+             {FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(0)}},
+            {pg_gpu_index_0_resource,
+             {FixedPoint(1), FixedPoint(1), FixedPoint(0), FixedPoint(0), FixedPoint(0)}},
+            {pg_gpu_index_1_resource,
+             {FixedPoint(0), FixedPoint(0), FixedPoint(1), FixedPoint(1), FixedPoint(0)}},
+        });
 
     ResourceSet success_request = ResourceSet({{pg_gpu_wildcard_resource, FixedPoint(1)},
                                                {pg_gpu_index_1_resource, FixedPoint(1)}});
@@ -365,28 +359,21 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateWithMultiplePgResourceAndBund
   ResourceID pg_gpu_index_0_resource("GPU_group_0_4482dec0faaf5ead891ff1659a9501000000");
   ResourceID pg_gpu_index_1_resource("GPU_group_1_4482dec0faaf5ead891ff1659a9501000000");
 
-  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
-      NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
-  r1.Set(cpu_resource, std::vector<FixedPoint>({FixedPoint(1)}));
-  r1.Set(pg_cpu_wildcard_resource, std::vector<FixedPoint>({FixedPoint(4)}));
-  r1.Set(pg_cpu_index_0_resource, std::vector<FixedPoint>({FixedPoint(2)}));
-  r1.Set(pg_cpu_index_1_resource, std::vector<FixedPoint>({FixedPoint(2)}));
-  r1.Set(
-      gpu_resource,
-      std::vector<FixedPoint>(
-          {FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(1)}));
-  r1.Set(
-      pg_gpu_wildcard_resource,
-      std::vector<FixedPoint>(
-          {FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(0)}));
-  r1.Set(
-      pg_gpu_index_0_resource,
-      std::vector<FixedPoint>(
-          {FixedPoint(1), FixedPoint(1), FixedPoint(0), FixedPoint(0), FixedPoint(0)}));
-  r1.Set(
-      pg_gpu_index_1_resource,
-      std::vector<FixedPoint>(
-          {FixedPoint(0), FixedPoint(0), FixedPoint(1), FixedPoint(1), FixedPoint(0)}));
+  NodeResourceInstanceSet r1 =
+      NodeResourceInstanceSet(absl::flat_hash_map<ResourceID, std::vector<FixedPoint>>{
+          {cpu_resource, {FixedPoint(1)}},
+          {pg_cpu_wildcard_resource, {FixedPoint(4)}},
+          {pg_cpu_index_0_resource, {FixedPoint(2)}},
+          {pg_cpu_index_1_resource, {FixedPoint(2)}},
+          {gpu_resource,
+           {FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(0), FixedPoint(1)}},
+          {pg_gpu_wildcard_resource,
+           {FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(1), FixedPoint(0)}},
+          {pg_gpu_index_0_resource,
+           {FixedPoint(1), FixedPoint(1), FixedPoint(0), FixedPoint(0), FixedPoint(0)}},
+          {pg_gpu_index_1_resource,
+           {FixedPoint(0), FixedPoint(0), FixedPoint(1), FixedPoint(1), FixedPoint(0)}},
+      });
 
   ResourceSet fail_request = ResourceSet({{pg_cpu_wildcard_resource, FixedPoint(1)},
                                           {pg_gpu_wildcard_resource, FixedPoint(3)},
@@ -468,13 +455,14 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateSinglePgResourceAndNoBundleIn
         "CPU_group_1_4482dec0faaf5ead891ff1659a9501000000");
     ResourceID pg_cpu_index_2_resource(
         "CPU_group_2_4482dec0faaf5ead891ff1659a9501000000");
-    NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
-        NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
-    r1.Set(cpu_resource, std::vector<FixedPoint>({FixedPoint(1)}));
-    r1.Set(pg_cpu_wildcard_resource, std::vector<FixedPoint>({FixedPoint(5)}));
-    r1.Set(pg_cpu_index_0_resource, std::vector<FixedPoint>({FixedPoint(1)}));
-    r1.Set(pg_cpu_index_1_resource, std::vector<FixedPoint>({FixedPoint(2)}));
-    r1.Set(pg_cpu_index_2_resource, std::vector<FixedPoint>({FixedPoint(2)}));
+    NodeResourceInstanceSet r1 =
+        NodeResourceInstanceSet(absl::flat_hash_map<ResourceID, std::vector<FixedPoint>>{
+            {cpu_resource, {FixedPoint(1)}},
+            {pg_cpu_wildcard_resource, {FixedPoint(5)}},
+            {pg_cpu_index_0_resource, {FixedPoint(1)}},
+            {pg_cpu_index_1_resource, {FixedPoint(2)}},
+            {pg_cpu_index_2_resource, {FixedPoint(2)}},
+        });
 
     ResourceSet success_request =
         ResourceSet({{pg_cpu_wildcard_resource, FixedPoint(2)}});
@@ -538,43 +526,44 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateSinglePgResourceAndNoBundleIn
         "GPU_group_1_4482dec0faaf5ead891ff1659a9501000000");
     ResourceID pg_gpu_index_2_resource(
         "GPU_group_2_4482dec0faaf5ead891ff1659a9501000000");
-    NodeResourceInstanceSet r2 = NodeResourceInstanceSet(
-        NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
-    r2.Set(gpu_resource,
-           std::vector<FixedPoint>({FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(1)}));
-    r2.Set(pg_gpu_wildcard_resource,
-           std::vector<FixedPoint>({FixedPoint(1),
-                                    FixedPoint(1),
-                                    FixedPoint(1),
-                                    FixedPoint(1),
-                                    FixedPoint(1),
-                                    FixedPoint(0)}));
-    r2.Set(pg_gpu_index_0_resource,
-           std::vector<FixedPoint>({FixedPoint(1),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0)}));
-    r2.Set(pg_gpu_index_1_resource,
-           std::vector<FixedPoint>({FixedPoint(0),
-                                    FixedPoint(1),
-                                    FixedPoint(1),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0)}));
-    r2.Set(pg_gpu_index_2_resource,
-           std::vector<FixedPoint>({FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(0),
-                                    FixedPoint(1),
-                                    FixedPoint(1),
-                                    FixedPoint(0)}));
+    NodeResourceInstanceSet r2 =
+        NodeResourceInstanceSet(absl::flat_hash_map<ResourceID, std::vector<FixedPoint>>{
+            {gpu_resource,
+             {FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(1)}},
+            {pg_gpu_wildcard_resource,
+             {FixedPoint(1),
+              FixedPoint(1),
+              FixedPoint(1),
+              FixedPoint(1),
+              FixedPoint(1),
+              FixedPoint(0)}},
+            {pg_gpu_index_0_resource,
+             {FixedPoint(1),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0)}},
+            {pg_gpu_index_1_resource,
+             {FixedPoint(0),
+              FixedPoint(1),
+              FixedPoint(1),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0)}},
+            {pg_gpu_index_2_resource,
+             {FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(0),
+              FixedPoint(1),
+              FixedPoint(1),
+              FixedPoint(0)}},
+        });
 
     ResourceSet success_request =
         ResourceSet({{pg_gpu_wildcard_resource, FixedPoint(2)}});
@@ -743,48 +732,49 @@ TEST_F(NodeResourceInstanceSetTest, TestTryAllocateMultiplePgResourceAndNoBundle
   ResourceID pg_gpu_index_1_resource("GPU_group_1_4482dec0faaf5ead891ff1659a9501000000");
   ResourceID pg_gpu_index_2_resource("GPU_group_2_4482dec0faaf5ead891ff1659a9501000000");
 
-  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
-      NodeResourceSet(absl::flat_hash_map<std::string, double>{}));
-  r1.Set(cpu_resource, std::vector<FixedPoint>({FixedPoint(1)}));
-  r1.Set(pg_cpu_wildcard_resource, std::vector<FixedPoint>({FixedPoint(5)}));
-  r1.Set(pg_cpu_index_0_resource, std::vector<FixedPoint>({FixedPoint(1)}));
-  r1.Set(pg_cpu_index_1_resource, std::vector<FixedPoint>({FixedPoint(2)}));
-  r1.Set(pg_cpu_index_2_resource, std::vector<FixedPoint>({FixedPoint(2)}));
-  r1.Set(gpu_resource,
-         std::vector<FixedPoint>({FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(1)}));
-  r1.Set(pg_gpu_wildcard_resource,
-         std::vector<FixedPoint>({FixedPoint(1),
-                                  FixedPoint(1),
-                                  FixedPoint(1),
-                                  FixedPoint(1),
-                                  FixedPoint(1),
-                                  FixedPoint(0)}));
-  r1.Set(pg_gpu_index_0_resource,
-         std::vector<FixedPoint>({FixedPoint(1),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0)}));
-  r1.Set(pg_gpu_index_1_resource,
-         std::vector<FixedPoint>({FixedPoint(0),
-                                  FixedPoint(1),
-                                  FixedPoint(1),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0)}));
-  r1.Set(pg_gpu_index_2_resource,
-         std::vector<FixedPoint>({FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(0),
-                                  FixedPoint(1),
-                                  FixedPoint(1),
-                                  FixedPoint(0)}));
+  NodeResourceInstanceSet r1 =
+      NodeResourceInstanceSet(absl::flat_hash_map<ResourceID, std::vector<FixedPoint>>{
+          {cpu_resource, {FixedPoint(1)}},
+          {pg_cpu_wildcard_resource, {FixedPoint(5)}},
+          {pg_cpu_index_0_resource, {FixedPoint(1)}},
+          {pg_cpu_index_1_resource, {FixedPoint(2)}},
+          {pg_cpu_index_2_resource, {FixedPoint(2)}},
+          {gpu_resource,
+           {FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(1)}},
+          {pg_gpu_wildcard_resource,
+           {FixedPoint(1),
+            FixedPoint(1),
+            FixedPoint(1),
+            FixedPoint(1),
+            FixedPoint(1),
+            FixedPoint(0)}},
+          {pg_gpu_index_0_resource,
+           {FixedPoint(1),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0)}},
+          {pg_gpu_index_1_resource,
+           {FixedPoint(0),
+            FixedPoint(1),
+            FixedPoint(1),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0)}},
+          {pg_gpu_index_2_resource,
+           {FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(0),
+            FixedPoint(1),
+            FixedPoint(1),
+            FixedPoint(0)}},
+      });
 
   ResourceSet fail_request = ResourceSet({{pg_cpu_wildcard_resource, FixedPoint(2)},
                                           {pg_gpu_wildcard_resource, FixedPoint(3)}});
@@ -979,8 +969,8 @@ TEST_F(NodeResourceInstanceSetTest, TestSubtract) {
 }
 
 TEST_F(NodeResourceInstanceSetTest, TestToNodeResourceSet) {
-  NodeResourceInstanceSet r1 =
-      NodeResourceInstanceSet(NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
+  NodeResourceInstanceSet r1 = NodeResourceInstanceSet(
+      absl::flat_hash_map<std::string, double>{{"CPU", 2}, {"GPU", 2}});
   ASSERT_EQ(r1.ToNodeResourceSet(), NodeResourceSet({{"CPU", 2}, {"GPU", 2}}));
 }
 
