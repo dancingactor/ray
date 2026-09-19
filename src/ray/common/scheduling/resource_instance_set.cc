@@ -294,109 +294,142 @@ NodeResourceInstanceSet::TryAllocate(const ResourceSet &resource_demands) {
 
 std::optional<std::vector<FixedPoint>> NodeResourceInstanceSet::TryAllocate(
     ResourceID resource_id, FixedPoint demand) {
-  std::vector<FixedPoint> available = Get(resource_id);
+  auto it = resources_.find(resource_id);
+  if (it == resources_.end()) {
+    if (!resource_id.IsImplicitResource()) {
+      return std::nullopt;
+    }
+    // Implicit resources default to {1.0}; materialize into the map so we can
+    // track their allocated state without an extra copy through Get().
+    resources_[resource_id] = std::vector<FixedPoint>{FixedPoint(1.0)};
+    it = resources_.find(resource_id);
+  }
+  auto &available = it->second;
   if (available.empty()) {
     return std::nullopt;
   }
 
-  std::vector<FixedPoint> allocation(available.size());
-  FixedPoint remaining_demand = demand;
-
   if (available.size() == 1) {
     // This resource has just one instance.
-    if (available[0] >= remaining_demand) {
-      available[0] -= remaining_demand;
-      allocation[0] = remaining_demand;
-      Set(resource_id, std::move(available));
-      return std::make_optional<std::vector<FixedPoint>>(std::move(allocation));
-    } else {
-      // Not enough capacity.
+    if (available[0] < demand) {
       return std::nullopt;
     }
+    std::vector<FixedPoint> allocation(1);
+    allocation[0] = demand;
+    available[0] -= demand;
+    // An implicit resource that returns to the default value should not be stored.
+    if (resource_id.IsImplicitResource() && available[0] == FixedPoint(1)) {
+      resources_.erase(resource_id);
+    }
+    return allocation;
   }
 
-  // If resources has multiple instances, each instance has total capacity of 1.
-  //
-  // As long as remaining_demand is greater than 1.,
-  // allocate full unit-capacity instances until the remaining_demand becomes fractional.
-  // Then try to find the best fit for the fractional remaining_resources. Best fit means
-  // allocating the resource instance with the smallest available capacity greater than
-  // remaining_demand
-  if (remaining_demand >= 1.) {
+  // GPU demand is either an integer (≥1 whole instances) or a fraction (<1 of
+  // one instance). A mixed value like 1.4 is not a valid Ray resource request,
+  // so the two branches below are mutually exclusive.
+  if (demand >= 1.) {
+    // Integer demand: allocate full instances in-place until satisfied.
+    std::vector<FixedPoint> allocation(available.size());
     for (size_t i = 0; i < available.size(); i++) {
       if (available[i] == 1.) {
         // Allocate a full unit-capacity instance.
         allocation[i] = 1.;
         available[i] = 0;
-        remaining_demand -= 1.;
-      }
-      if (remaining_demand < 1.) {
-        break;
-      }
-    }
-  }
-
-  if (remaining_demand >= 1.) {
-    // Cannot satisfy a demand greater than one if no unit capacity resource is available.
-    return std::nullopt;
-  }
-
-  // Remaining demand is fractional. Find the best fit, if exists.
-  if (remaining_demand > 0.) {
-    int64_t idx_best_fit = -1;
-    FixedPoint available_best_fit = 1.;
-    for (size_t i = 0; i < available.size(); i++) {
-      if (available[i] >= remaining_demand) {
-        if (idx_best_fit == -1 ||
-            (available[i] - remaining_demand < available_best_fit)) {
-          available_best_fit = available[i] - remaining_demand;
-          idx_best_fit = static_cast<int64_t>(i);
+        demand -= 1.;
+        if (demand == 0.) {
+          return allocation;
         }
       }
     }
-    if (idx_best_fit == -1) {
-      return std::nullopt;
-    } else {
-      allocation[idx_best_fit] = remaining_demand;
-      available[idx_best_fit] -= remaining_demand;
+    // Not enough full instances, rollback in-place modifications.
+    for (size_t i = 0; i < available.size(); i++) {
+      available[i] += allocation[i];
     }
+    return std::nullopt;
   }
 
-  Set(resource_id, std::move(available));
-  return std::make_optional<std::vector<FixedPoint>>(std::move(allocation));
+  // Fractional demand: find the instance with the smallest sufficient availability
+  // (best fit) to minimise fragmentation.
+  int64_t idx_best_fit = -1;
+  FixedPoint available_best_fit = 1.;
+  for (size_t i = 0; i < available.size(); i++) {
+    if (available[i] >= demand) {
+      if (idx_best_fit == -1 || (available[i] - demand < available_best_fit)) {
+        available_best_fit = available[i] - demand;
+        idx_best_fit = static_cast<int64_t>(i);
+      }
+    }
+  }
+  if (idx_best_fit == -1) {
+    return std::nullopt;
+  }
+  std::vector<FixedPoint> allocation(available.size());
+  allocation[idx_best_fit] = demand;
+  available[idx_best_fit] -= demand;
+  return allocation;
 }
 
 void NodeResourceInstanceSet::AllocateWithReference(
     const std::vector<FixedPoint> &ref_allocation, ResourceID resource_id) {
-  std::vector<FixedPoint> available = Get(resource_id);
-  RAY_CHECK(!available.empty());
-  RAY_CHECK_EQ(available.size(), ref_allocation.size());
-
+  auto it = resources_.find(resource_id);
+  if (it == resources_.end()) {
+    // Resource not found; fall back to copy path (handles implicit defaults via Get()).
+    std::vector<FixedPoint> available = Get(resource_id);
+    RAY_CHECK(!available.empty());
+    RAY_CHECK_EQ(available.size(), ref_allocation.size());
+    for (size_t i = 0; i < ref_allocation.size(); i++) {
+      if (available[i] < ref_allocation[i]) {
+        // Only CPU resource can go negative due to the behavior
+        // that ray.get() will temporarily release the CPU resource.
+        // See https://github.com/ray-project/ray/pull/50517.
+        RAY_CHECK(IsCPUOrPlacementGroupCPUResource(resource_id))
+            << "Resource " << resource_id.Binary()
+            << " has less availability than requested. Available: "
+            << debug_string(available) << ", requested: " << debug_string(ref_allocation);
+      }
+      available[i] -= ref_allocation[i];
+    }
+    Set(resource_id, std::move(available));
+    return;
+  }
+  auto &stored = it->second;
+  RAY_CHECK(!stored.empty());
+  RAY_CHECK_EQ(stored.size(), ref_allocation.size());
   for (size_t i = 0; i < ref_allocation.size(); i++) {
-    if (available[i] < ref_allocation[i]) {
+    if (stored[i] < ref_allocation[i]) {
       // Only CPU resource can go negative due to the behavior
       // that ray.get() will temporarily release the CPU resource.
       // See https://github.com/ray-project/ray/pull/50517.
       RAY_CHECK(IsCPUOrPlacementGroupCPUResource(resource_id))
           << "Resource " << resource_id.Binary()
           << " has less availability than requested. Available: "
-          << debug_string(available) << ", requested: " << debug_string(ref_allocation);
+          << debug_string(stored) << ", requested: " << debug_string(ref_allocation);
     }
-    available[i] -= ref_allocation[i];
+    stored[i] -= ref_allocation[i];
   }
-
-  Set(resource_id, std::move(available));
 }
 
 void NodeResourceInstanceSet::Free(ResourceID resource_id,
                                    const std::vector<FixedPoint> &allocation) {
-  std::vector<FixedPoint> available = Get(resource_id);
-  RAY_CHECK_EQ(allocation.size(), available.size());
-  for (size_t i = 0; i < available.size(); i++) {
-    available[i] += allocation[i];
+  auto it = resources_.find(resource_id);
+  if (it == resources_.end()) {
+    // Resource not in map (e.g., implicit at default). Fall back to copy path.
+    std::vector<FixedPoint> available = Get(resource_id);
+    RAY_CHECK_EQ(allocation.size(), available.size());
+    for (size_t i = 0; i < available.size(); i++) {
+      available[i] += allocation[i];
+    }
+    Set(resource_id, std::move(available));
+    return;
   }
-
-  Set(resource_id, std::move(available));
+  auto &stored = it->second;
+  RAY_CHECK_EQ(allocation.size(), stored.size());
+  for (size_t i = 0; i < stored.size(); i++) {
+    stored[i] += allocation[i];
+  }
+  if (resource_id.IsImplicitResource() && stored[0] == FixedPoint(1)) {
+    resources_.erase(resource_id);
+  }
 }
 
 void NodeResourceInstanceSet::Add(ResourceID resource_id,
