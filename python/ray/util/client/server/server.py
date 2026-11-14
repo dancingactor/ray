@@ -865,7 +865,7 @@ def _exit_on_stdin_eof():
     Exits immediately, like the kernel fate-sharing it replaces, since a
     graceful shutdown can hang when the rest of the cluster is gone too.
     """
-    sys.stdin.buffer.read()
+    os.read(sys.stdin.fileno(), 4096)
     logger.info("stdin closed, exiting because the parent process exited.")
     os._exit(1)
 
